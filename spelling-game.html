@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spelling Game</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Nunito', sans-serif;
+  background: #f0f4ff;
+  min-height: 100vh;
+  display: flex; align-items: flex-start; justify-content: center;
+  padding: 1.5rem 1rem;
+}
+.card {
+  background: white; border-radius: 24px;
+  padding: 2rem 1.75rem; width: 100%; max-width: 480px;
+  box-shadow: 0 8px 40px rgba(80,80,160,0.10);
+}
+
+/* ── Shared ── */
+.back-link { background: none; border: none; font-family: inherit; font-size: 13px; color: #aaaacc; cursor: pointer; padding: 0; margin-bottom: 1.5rem; display: inline-flex; align-items: center; gap: 4px; }
+.back-link:hover { color: #7c7cf8; }
+.screen-title { font-size: 20px; font-weight: 800; color: #2d2d5e; margin-bottom: 0.25rem; }
+.primary-btn {
+  width: 100%; padding: 14px;
+  background: linear-gradient(135deg, #7c7cf8, #a78bfa);
+  color: white; border: none; border-radius: 14px;
+  font-family: 'Nunito', sans-serif; font-size: 16px; font-weight: 800;
+  cursor: pointer; transition: opacity 0.2s; margin-top: 0.75rem;
+}
+.primary-btn:hover { opacity: 0.9; }
+.primary-btn:disabled { opacity: 0.35; cursor: default; }
+.green-btn {
+  background: linear-gradient(135deg,#34c88a,#20b070);
+  color: white; border: none; border-radius: 14px;
+  padding: 13px 36px; font-size: 16px; font-weight: 800;
+  cursor: pointer; font-family: 'Nunito', sans-serif;
+  transition: opacity 0.2s;
+}
+.green-btn:hover { opacity: 0.9; }
+.text-link { background: none; border: none; font-size: 13px; color: #aaaacc; cursor: pointer; font-family: inherit; text-decoration: underline; margin-top: 1rem; display: inline-block; }
+.text-link:hover { color: #7c7cf8; }
+
+/* ── Loading ── */
+.loading { text-align: center; padding: 3rem 1rem; }
+.loading-spinner { width: 40px; height: 40px; border: 4px solid #eef0ff; border-top-color: #7c7cf8; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 1rem; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading p { font-size: 14px; color: #aaaacc; }
+.error-box { background: #fff0f0; border: 1.5px solid #ffcccc; border-radius: 14px; padding: 1rem; font-size: 14px; color: #cc3333; margin-top: 1rem; text-align: center; }
+
+/* ── Catalog ── */
+.catalog-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+.catalog-title  { font-size: 22px; font-weight: 800; color: #2d2d5e; }
+.sync-btn { background: #eef0ff; border: 1.5px solid #c8caff; border-radius: 10px; padding: 7px 14px; font-size: 13px; font-weight: 700; color: #7c7cf8; cursor: pointer; font-family: inherit; }
+.sync-btn:hover { background: #e0e3ff; }
+.session-card {
+  border: 2px solid #eef0ff; border-radius: 16px;
+  padding: 1rem 1.25rem; margin-bottom: 0.75rem;
+  cursor: pointer; transition: border-color 0.2s, background 0.2s;
+}
+.session-card:hover { border-color: #c8caff; background: #fafaff; }
+.session-card h3 { font-size: 15px; font-weight: 800; color: #2d2d5e; margin-bottom: 0.2rem; }
+.session-card p  { font-size: 12px; color: #aaaacc; margin-bottom: 0.4rem; }
+.pattern-dots { display: flex; gap: 4px; flex-wrap: wrap; }
+.pattern-dot { font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 20px; text-transform: uppercase; }
+.empty-state { text-align: center; padding: 2.5rem 1rem; color: #aaaacc; }
+.empty-state div { font-size: 48px; margin-bottom: 0.75rem; }
+.empty-state p { font-size: 14px; line-height: 1.6; }
+
+/* ── Intro ── */
+.intro-wrap { text-align: center; }
+.intro-title { font-size: 22px; font-weight: 800; color: #2d2d5e; margin-bottom: 0.25rem; }
+.intro-sub   { font-size: 13px; color: #aaaacc; margin-bottom: 1.5rem; }
+.round-badge { display: inline-block; padding: 4px 14px; border-radius: 20px; font-size: 12px; font-weight: 800; margin-bottom: 1.25rem; }
+.pattern-group { border-radius: 14px; padding: 0.75rem 1.25rem; margin-bottom: 0.75rem; text-align: left; }
+.pattern-label { font-size: 20px; font-weight: 800; margin-bottom: 0.25rem; text-transform: uppercase; letter-spacing: 2px; }
+.pattern-words { display: flex; flex-direction: column; gap: 4px; }
+.pattern-word  { font-size: 15px; font-weight: 700; color: #2d2d5e; }
+
+/* ── Game ── */
+.topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; }
+.stars  { font-size: 18px; color: #f5b100; letter-spacing: 3px; min-width: 60px; }
+.prog   { font-size: 13px; font-weight: 700; color: #aaaacc; }
+.round-pill { font-size: 11px; font-weight: 800; padding: 3px 10px; border-radius: 20px; }
+.word-reveal {
+  font-size: 26px; font-weight: 800; letter-spacing: 4px; color: #2d2d5e;
+  min-height: 46px; display: flex; align-items: center; justify-content: center;
+  margin-bottom: 0.4rem; text-transform: uppercase; transition: opacity 0.5s; flex-wrap: wrap;
+}
+.word-reveal.hidden { opacity: 0; pointer-events: none; }
+.chunk-highlight { border-radius: 6px; padding: 0 3px; }
+.timer-wrap { height: 5px; background: #eef0ff; border-radius: 5px; margin-bottom: 0.9rem; overflow: hidden; }
+.timer-bar  { height: 5px; border-radius: 5px; }
+.sub-lbl { font-size: 13px; color: #aaaacc; font-weight: 600; margin-bottom: 0.9rem; min-height: 18px; text-align: center; }
+.hear-btn {
+  display: block; margin: 0 auto 0.3rem;
+  background: #f0f4ff; border: 1.5px solid #dde0f5; border-radius: 50px;
+  padding: 7px 20px; font-size: 13px; font-weight: 700; color: #7c7cf8;
+  cursor: pointer; font-family: 'Nunito', sans-serif;
+}
+.hear-btn:hover { background: #e4e8ff; }
+.kbd-hint { font-size: 11px; color: #ccccdd; text-align: center; margin-bottom: 1.1rem; }
+.boxes { display: flex; gap: 7px; justify-content: center; margin-bottom: 1.5rem; flex-wrap: wrap; }
+.box {
+  min-width: 44px; height: 52px; border-radius: 11px; border: 2.5px solid #dde0f5;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; font-weight: 800; text-transform: uppercase;
+  transition: all 0.2s; color: #2d2d5e; background: white; padding: 0 6px;
+}
+.box.active { border-color: #7c7cf8; background: #f0f0ff; color: #5050cc; }
+.box.done   { border-color: #34c88a; background: #e8faf2; color: #1a8a5a; }
+.box.wrong  { animation: shake 0.35s; border-color: #ff6b6b; background: #fff0f0; }
+@keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-7px)} 75%{transform:translateX(7px)} }
+.pool { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 1.1rem; }
+.tile {
+  min-width: 48px; height: 52px; border-radius: 12px; border: 2px solid #dde0f5;
+  background: white; font-size: 18px; font-weight: 800; cursor: pointer;
+  text-transform: uppercase; color: #2d2d5e; font-family: 'Nunito', sans-serif;
+  display: flex; align-items: center; justify-content: center; padding: 0 8px;
+  transition: background 0.12s, transform 0.1s, opacity 0.18s;
+}
+.tile:hover  { background: #f0f0ff; border-color: #a0a0f8; }
+.tile:active { transform: scale(0.91); }
+.tile.used   { opacity: 0; pointer-events: none; transform: scale(0.65); }
+.tile.chunk-tile { font-size: 15px; }
+.tile.flash-wrong { background: #fff0f0; border-color: #ff6b6b; color: #cc3333; animation: shake 0.35s; }
+.undo-btn {
+  display: block; margin: 0 auto;
+  background: none; border: 1.5px solid #dde0f5; border-radius: 10px;
+  padding: 6px 16px; font-size: 13px; font-weight: 700; color: #aaaacc;
+  cursor: pointer; font-family: 'Nunito', sans-serif;
+}
+.undo-btn:hover { background: #f8f8ff; color: #7c7cf8; border-color: #c0c0f8; }
+
+/* ── Celebrate ── */
+.celebrate { text-align: center; padding: 1rem 0; }
+.cel-icon  { font-size: 64px; margin-bottom: 0.75rem; }
+.cel-word  { font-size: 24px; font-weight: 800; color: #34c88a; margin-bottom: 0.4rem; text-transform: uppercase; letter-spacing: 4px; }
+.cel-msg   { font-size: 20px; font-weight: 800; color: #2d2d5e; margin-bottom: 0.3rem; }
+.cel-stars { font-size: 20px; color: #f5b100; margin-bottom: 1.5rem; }
+
+/* ── All done ── */
+.done-wrap { text-align: center; padding: 1rem 0; }
+.done-wrap h2 { font-size: 22px; font-weight: 800; color: #2d2d5e; margin: 1rem 0 0.5rem; }
+.done-wrap p  { font-size: 15px; color: #8888aa; margin-bottom: 0.25rem; }
+.done-stars   { font-size: 26px; color: #f5b100; margin: 0.75rem 0 1.5rem; }
+.sync-status { font-size: 12px; color: #aaaacc; margin-top: 0.5rem; }
+.sync-status.ok { color: #34c88a; }
+.sync-status.err { color: #ff6b6b; }
+</style>
+</head>
+<body>
+<div class="card" id="app"></div>
+
+<script>
+const CATALOG_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRYFZN1cEJxiI0Rg-nskWeM4ELfF7BRyGNbNmeDA1D7YQX7WVBVd9uvjKTBhpoY7XQkPKHmFZxEzNzF/pub?output=csv';
+const SCRIPT_URL  = 'https://script.google.com/macros/s/AKfycbzdnOH5g90NY6Lrk1e-QUuhCinxluIEIk24VfC0ZNjdX7pe-Q5KRAWSBwYcbPh403_MrA/exec';
+
+const PALETTE = [
+  { bg: '#fff3e0', text: '#b85c00', bar: '#f5a623' },
+  { bg: '#e8f5e9', text: '#1b5e20', bar: '#34c88a' },
+  { bg: '#e8eaf6', text: '#283593', bar: '#7c7cf8' },
+  { bg: '#fce4ec', text: '#880e4f', bar: '#e91e8c' },
+  { bg: '#e0f7fa', text: '#006064', bar: '#00bcd4' },
+  { bg: '#f3e5f5', text: '#4a148c', bar: '#ab47bc' },
+];
+const MSGS = ['Amazing!','Superstar!','Brilliant!','You got it!','Wow!','Perfect!','Well done!'];
+const ALL  = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+
+let catalog = [];
+let G = {};
+let revealTimer = null;
+
+// ── Parse ──
+function parseWord(entry) {
+  const m = entry.trim().match(/^([a-zA-Z]*)\[([a-zA-Z]+)\]([a-zA-Z]*)$/);
+  if (!m) return null;
+  return { raw: (m[1]+m[2]+m[3]).toLowerCase(), chunk: m[2].toLowerCase(), before: m[1].toLowerCase(), after: m[3].toLowerCase(), original: entry.trim() };
+}
+
+function getPatterns(words) {
+  const seen = [], result = [];
+  words.forEach(w => { if (w && !seen.includes(w.chunk)) { seen.push(w.chunk); result.push(w.chunk); } });
+  return result;
+}
+
+function patternColor(chunk, patterns) {
+  return PALETTE[patterns.indexOf(chunk) % PALETTE.length];
+}
+
+function renderHighlighted(wordObj, patterns) {
+  const col = patternColor(wordObj.chunk, patterns);
+  return `${wordObj.before.toUpperCase()}<span class="chunk-highlight" style="background:${col.bg};color:${col.text}">${wordObj.chunk.toUpperCase()}</span>${wordObj.after.toUpperCase()}`;
+}
+
+// ── Fetch catalog from Google Sheets ──
+async function fetchCatalog() {
+  const resp = await fetch(CATALOG_URL);
+  const text = await resp.text();
+  const lines = text.trim().split('\n').slice(1); // skip header
+  const map = {};
+  lines.forEach(line => {
+    const cols = line.split(',');
+    const session = cols[0]?.trim().replace(/^"|"$/g, '');
+    const word    = cols[1]?.trim().replace(/^"|"$/g, '');
+    if (!session || !word) return;
+    if (!map[session]) map[session] = [];
+    map[session].push(word);
+  });
+  return Object.entries(map).map(([title, entries]) => ({ title, entries }));
+}
+
+// ── Post progress to Apps Script ──
+async function postProgress(data) {
+  try {
+    await fetch(SCRIPT_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    return true;
+  } catch { return false; }
+}
+
+// ══════════════════════════════════════
+// CATALOG SCREEN
+// ══════════════════════════════════════
+async function showCatalog(forceRefresh) {
+  clearTimeout(revealTimer);
+  document.getElementById('app').innerHTML = `
+    <div class="loading"><div class="loading-spinner"></div><p>Loading sessions...</p></div>`;
+
+  try {
+    catalog = await fetchCatalog();
+    localStorage.setItem('spelling_catalog_cache', JSON.stringify(catalog));
+  } catch(e) {
+    const cached = localStorage.getItem('spelling_catalog_cache');
+    if (cached) {
+      catalog = JSON.parse(cached);
+    } else {
+      document.getElementById('app').innerHTML = `
+        <div class="catalog-header"><div class="catalog-title">📖 Spelling Game</div></div>
+        <div class="error-box">Could not load sessions. Check your internet connection and try again.<br><br>
+        <button class="sync-btn" onclick="showCatalog(true)">retry</button></div>`;
+      return;
+    }
+  }
+
+  const cards = catalog.length === 0
+    ? `<div class="empty-state"><div>📚</div><p>No sessions found in your Google Sheet yet.</p></div>`
+    : catalog.map((s, i) => {
+        const words = s.entries.map(parseWord).filter(Boolean);
+        const patterns = getPatterns(words);
+        const dots = patterns.map(p => {
+          const col = patternColor(p, patterns);
+          return `<span class="pattern-dot" style="background:${col.bg};color:${col.text}">${p}</span>`;
+        }).join('');
+        return `
+          <div class="session-card" onclick="showIntro(${i})">
+            <h3>${s.title}</h3>
+            <p>${words.length} word${words.length !== 1 ? 's' : ''}</p>
+            <div class="pattern-dots">${dots}</div>
+          </div>`;
+      }).join('');
+
+  document.getElementById('app').innerHTML = `
+    <div class="catalog-header">
+      <div class="catalog-title">📖 Spelling Game</div>
+      <button class="sync-btn" onclick="showCatalog(true)">↻ sync</button>
+    </div>
+    ${cards}
+  `;
+}
+
+// ══════════════════════════════════════
+// INTRO SCREEN
+// ══════════════════════════════════════
+function showIntro(idx, round) {
+  clearTimeout(revealTimer);
+  round = round || 1;
+  const s = catalog[idx];
+  const words = s.entries.map(parseWord).filter(Boolean);
+  const patterns = getPatterns(words);
+
+  const roundColors = { 1: { bg: '#eef0ff', text: '#5050cc' }, 2: { bg: '#e8faf2', text: '#1a8a5a' } };
+  const rc = roundColors[round];
+  const roundMsg = round === 1
+    ? '👀 Round 1 — look then spell'
+    : '👂 Round 2 — listen then spell';
+
+  const groups = patterns.map(p => {
+    const col = patternColor(p, patterns);
+    const pw = words.filter(w => w.chunk === p);
+    const wordSpans = pw.map(w => `<span class="pattern-word">${renderHighlighted(w, patterns)}</span>`).join('');
+    return `
+      <div class="pattern-group" style="background:${col.bg}">
+        <div class="pattern-label" style="color:${col.text}">${p}</div>
+        <div class="pattern-words">${wordSpans}</div>
+      </div>`;
+  }).join('');
+
+  document.getElementById('app').innerHTML = `
+    <button class="back-link" onclick="showCatalog()">← back</button>
+    <div class="intro-wrap">
+      <div class="intro-title">${s.title}</div>
+      <div class="intro-sub">Look at the patterns together, then start!</div>
+      <div class="round-badge" style="background:${rc.bg};color:${rc.text}">${roundMsg}</div>
+      ${groups}
+      <button class="green-btn" style="width:100%;margin-top:0.5rem" onclick="startGame(${idx},${round})">start →</button>
+    </div>
+  `;
+}
+
+// ══════════════════════════════════════
+// GAME
+// ══════════════════════════════════════
+function startGame(idx, round) {
+  const s = catalog[idx];
+  const words = s.entries.map(parseWord).filter(Boolean).sort(() => Math.random() - 0.5);
+  const patterns = getPatterns(words);
+  G = { words, patterns, idx: 0, stars: 0, pos: 0, mistakes: 0, pool: [], sessionIdx: idx, round, sessionTitle: s.title };
+  startWord();
+}
+
+function startWord() {
+  G.pos = 0; G.mistakes = 0;
+  G.pool = buildPool(G.words[G.idx]);
+  renderGame();
+  if (G.round === 1) {
+    setTimeout(() => say(G.words[G.idx].raw), 400);
+  } else {
+    // Round 2: no flash, just audio
+    setTimeout(() => say(G.words[G.idx].raw), 600);
+  }
+}
+
+function say(w) {
+  if (!window.speechSynthesis) return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(w);
+  u.rate = 0.75; u.pitch = 1.1;
+  speechSynthesis.speak(u);
+}
+
+function buildPool(wordObj) {
+  const { raw, chunk, before, after } = wordObj;
+  const patterns = G.patterns;
+
+  // Build tiles: for each position, either a letter tile or a chunk tile
+  // We represent the pool as position-based items
+  // Letters in before/after: individual letter tiles + random distractors
+  // Chunk position: all pattern chunks as tile options
+
+  const letterTiles = [];
+  // Letters before chunk
+  before.split('').forEach(l => letterTiles.push({ type: 'letter', letter: l.toUpperCase() }));
+  // Chunk tile placeholder
+  letterTiles.push({ type: 'chunk', letter: chunk.toUpperCase() });
+  // Letters after chunk
+  after.split('').forEach(l => letterTiles.push({ type: 'letter', letter: l.toUpperCase() }));
+
+  // For letter distractors: pick 3 random letters not in the word
+  const usedLetters = raw.toUpperCase().split('');
+  const extraLetters = ALL.filter(c => !usedLetters.includes(c)).sort(() => Math.random() - 0.5).slice(0, 3);
+  extraLetters.forEach(l => letterTiles.push({ type: 'letter', letter: l, distractor: true }));
+
+  // For chunk distractors: other patterns from same session
+  const chunkDistractors = patterns.filter(p => p !== chunk);
+  chunkDistractors.forEach(p => letterTiles.push({ type: 'chunk', letter: p.toUpperCase(), distractor: true }));
+
+  // Shuffle and assign IDs
+  return letterTiles.sort(() => Math.random() - 0.5).map((t, i) => ({ ...t, id: i, used: false }));
+}
+
+// Sequence of positions: letters in before, then 'chunk' (multi), then letters in after
+function getPositionSequence(wordObj) {
+  const seq = [];
+  wordObj.before.split('').forEach((l, i) => seq.push({ type: 'letter', value: l.toUpperCase(), boxIdx: i }));
+  seq.push({ type: 'chunk', value: wordObj.chunk.toUpperCase(), boxIdx: wordObj.before.length });
+  wordObj.after.split('').forEach((l, i) => seq.push({ type: 'letter', value: l.toUpperCase(), boxIdx: wordObj.before.length + 1 + i }));
+  return seq;
+}
+
+function renderGame() {
+  const { words, patterns, idx, stars, pos, pool, round } = G;
+  if (idx >= words.length) { renderAllDone(); return; }
+  const wordObj = words[idx];
+  const col = patternColor(wordObj.chunk, patterns);
+  const seq = getPositionSequence(wordObj);
+  const showing = pos === 0 && round === 1;
+
+  const roundColors = { 1: { bg: '#eef0ff', text: '#5050cc' }, 2: { bg: '#e8faf2', text: '#1a8a5a' } };
+  const rc = roundColors[round];
+
+  // Build boxes: one per sequence position
+  const boxes = seq.map((s, i) => {
+    let cls = 'box';
+    if (i < pos) cls += ' done';
+    else if (i === pos) cls += ' active';
+    const content = i < pos ? s.value : '';
+    const style = i < pos && s.type === 'chunk' ? `style="background:${col.bg};color:${col.text};border-color:${col.bar}"` : '';
+    return `<div class="${cls}" id="b${i}" ${style}>${content}</div>`;
+  }).join('');
+
+  // Build pool tiles — only show non-used
+  const tiles = pool.map(t => {
+    const isChunk = t.type === 'chunk';
+    return `<button class="tile${t.used ? ' used' : ''}${isChunk ? ' chunk-tile' : ''}" id="tile-${t.id}" onclick="pickTile(${t.id})">${t.letter}</button>`;
+  }).join('');
+
+  document.getElementById('app').innerHTML = `
+    <div class="topbar">
+      <div class="stars">${'★'.repeat(stars)}</div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="round-pill" style="background:${rc.bg};color:${rc.text}">Round ${round}</span>
+        <div class="prog">${idx + 1} / ${words.length}</div>
+      </div>
+    </div>
+    <div class="word-reveal${showing ? '' : ' hidden'}" id="ws">${renderHighlighted(wordObj, patterns)}</div>
+    <div class="timer-wrap" id="tw" style="${showing ? '' : 'display:none'}"><div class="timer-bar" id="tb" style="width:100%;background:${col.bar}"></div></div>
+    <div class="sub-lbl" id="sl">${showing ? 'remember it...' : round === 2 ? 'listen and spell' : 'spell it out'}</div>
+    <button class="hear-btn" onclick="say('${wordObj.raw}')">🔊 hear it</button>
+    <div class="kbd-hint">tap a tile or type on keyboard</div>
+    <div class="boxes">${boxes}</div>
+    <div class="pool">${tiles}</div>
+    ${pos > 0 ? `<button class="undo-btn" onclick="undoLast()">← undo</button>` : ''}
+  `;
+
+  if (showing) startRevealTimer(col.bar);
+}
+
+function startRevealTimer(barColor) {
+  clearTimeout(revealTimer);
+  const dur = 500, start = Date.now();
+  const tick = () => {
+    const el = document.getElementById('tb');
+    if (!el) return;
+    const pct = Math.max(0, 100 - (Date.now() - start) / dur * 100);
+    el.style.width = pct + '%';
+    if (pct > 0) requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+  revealTimer = setTimeout(() => {
+    const ws = document.getElementById('ws'), tw = document.getElementById('tw'), sl = document.getElementById('sl');
+    if (ws) ws.classList.add('hidden');
+    if (tw) tw.style.display = 'none';
+    if (sl) sl.textContent = 'spell it out';
+  }, dur);
+}
+
+function getCurrentSeq() {
+  return getPositionSequence(G.words[G.idx]);
+}
+
+function pickTile(id) {
+  const tile = G.pool.find(t => t.id === id);
+  if (!tile || tile.used) return;
+  pickValue(tile.letter, tile.type, tile.id);
+}
+
+function pickValue(value, type, tileId) {
+  const seq = getCurrentSeq();
+  const current = seq[G.pos];
+  if (!current) return;
+
+  const correct = current.value;
+  const correctType = current.type;
+
+  // Match: value must match and type must match
+  const isCorrect = value === correct && type === correctType;
+
+  if (isCorrect) {
+    // Mark tile used
+    const tile = tileId !== undefined
+      ? G.pool.find(t => t.id === tileId)
+      : G.pool.find(t => !t.used && t.letter === value && t.type === type);
+    if (tile) {
+      tile.used = true;
+      const tEl = document.getElementById('tile-' + tile.id);
+      if (tEl) tEl.classList.add('used');
+    }
+
+    // Fill box
+    const col = patternColor(G.words[G.idx].chunk, G.patterns);
+    const box = document.getElementById('b' + G.pos);
+    if (box) {
+      box.classList.remove('active'); box.classList.add('done');
+      box.textContent = value;
+      if (correctType === 'chunk') {
+        box.style.background = col.bg;
+        box.style.color = col.text;
+        box.style.borderColor = col.bar;
+      }
+    }
+    G.pos++;
+    const nb = document.getElementById('b' + G.pos);
+    if (nb) nb.classList.add('active');
+
+    const sl = document.getElementById('sl');
+    if (sl) sl.textContent = G.round === 2 ? 'listen and spell' : 'spell it out';
+
+    if (!document.querySelector('.undo-btn') && G.pos > 0) {
+      const pe = document.querySelector('.pool');
+      if (pe) { const b = document.createElement('button'); b.className = 'undo-btn'; b.innerHTML = '← undo'; b.onclick = undoLast; pe.insertAdjacentElement('afterend', b); }
+    }
+
+    if (G.pos === seq.length) {
+      clearTimeout(revealTimer);
+      const earned = G.mistakes === 0 ? 2 : 1;
+      G.stars += earned;
+      // Post to Google Sheets
+      postProgress({
+        timestamp: new Date().toISOString(),
+        session: G.sessionTitle,
+        word: G.words[G.idx].raw,
+        mistakes: G.mistakes,
+        round: G.round
+      });
+      setTimeout(() => renderCelebrate(G.words[G.idx], earned), 350);
+    }
+  } else {
+    G.mistakes++;
+    const tile = tileId !== undefined
+      ? G.pool.find(t => t.id === tileId)
+      : G.pool.find(t => !t.used && t.letter === value && t.type === type);
+    if (tile) {
+      const tEl = document.getElementById('tile-' + tile.id);
+      if (tEl) { tEl.classList.add('flash-wrong'); setTimeout(() => tEl.classList.remove('flash-wrong'), 420); }
+    }
+    const box = document.getElementById('b' + G.pos);
+    if (box) { box.classList.add('wrong'); setTimeout(() => box.classList.remove('wrong'), 420); }
+  }
+}
+
+function undoLast() {
+  if (G.pos === 0) return;
+  G.pos--;
+  const seq = getCurrentSeq();
+  const prev = seq[G.pos];
+  // Find and restore the tile
+  const tile = G.pool.slice().reverse().find(t => t.used && t.letter === prev.value && t.type === prev.type);
+  if (tile) { tile.used = false; const tEl = document.getElementById('tile-' + tile.id); if (tEl) tEl.classList.remove('used'); }
+  const box = document.getElementById('b' + G.pos);
+  if (box) {
+    box.classList.remove('done'); box.classList.add('active');
+    box.textContent = ''; box.style.background = ''; box.style.color = ''; box.style.borderColor = '';
+  }
+  const nb = document.getElementById('b' + (G.pos + 1));
+  if (nb) nb.classList.remove('active');
+}
+
+document.addEventListener('keydown', e => {
+  if (!G.words || G.idx >= G.words.length) return;
+  if (e.key === 'Backspace') { undoLast(); return; }
+  const letter = e.key.toUpperCase();
+  if (!/^[A-Z]$/.test(letter)) return;
+  // Find matching tile
+  const seq = getCurrentSeq();
+  const current = seq[G.pos];
+  if (!current) return;
+  // For letter positions
+  if (current.type === 'letter') {
+    const tile = G.pool.find(t => !t.used && t.letter === letter && t.type === 'letter');
+    if (tile) pickValue(letter, 'letter', tile.id);
+    else {
+      // Wrong letter — find any letter tile to flash
+      const anyTile = G.pool.find(t => !t.used && t.type === 'letter');
+      if (anyTile) pickValue(letter, 'letter', anyTile.id);
+      else { G.mistakes++; const box = document.getElementById('b' + G.pos); if (box) { box.classList.add('wrong'); setTimeout(() => box.classList.remove('wrong'), 420); } }
+    }
+  }
+  // Chunk positions can't be typed via single key — tiles only
+});
+
+function renderCelebrate(wordObj, earned) {
+  const msg = MSGS[Math.floor(Math.random() * MSGS.length)];
+  document.getElementById('app').innerHTML = `
+    <div class="celebrate">
+      <div class="cel-icon">🎉</div>
+      <div class="cel-word">${renderHighlighted(wordObj, G.patterns)}</div>
+      <div class="cel-msg">${msg}</div>
+      <div class="cel-stars">${'★'.repeat(earned)} ${earned === 2 ? 'no mistakes!' : 'keep going!'}</div>
+      <button class="green-btn" onclick="nextWord()">next word →</button>
+    </div>
+  `;
+  say(wordObj.raw);
+}
+
+function nextWord() {
+  G.idx++;
+  if (G.idx >= G.words.length) { renderAllDone(); return; }
+  startWord();
+}
+
+function renderAllDone() {
+  clearTimeout(revealTimer);
+  const isRound1 = G.round === 1;
+  document.getElementById('app').innerHTML = `
+    <div class="done-wrap">
+      <div style="font-size:64px">${isRound1 ? '🌟' : '🎁'}</div>
+      <h2>${isRound1 ? 'Round 1 done!' : 'All done!'}</h2>
+      <p>You earned <strong>${G.stars}</strong> stars</p>
+      <div class="done-stars">${'★'.repeat(G.stars)}</div>
+      ${isRound1
+        ? `<button class="green-btn" onclick="showIntro(${G.sessionIdx}, 2)">on to Round 2 →</button>`
+        : `<button class="green-btn" onclick="startGame(${G.sessionIdx}, 1)">play again →</button>`
+      }
+      <br>
+      <button class="text-link" onclick="showCatalog()">back to sessions</button>
+    </div>
+  `;
+}
+
+// ── Start ──
+showCatalog();
+</script>
+</body>
+</html>
