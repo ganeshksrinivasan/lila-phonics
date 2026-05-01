@@ -214,7 +214,6 @@ function showIntro(idx){
     const col = patternColor(p,patterns);
     const pw = words.filter(w=>w.chunk===p);
     return `<div class="pattern-group" style="background:${col.bg}">
-      <div class="pattern-label" style="color:${col.text}">${p}</div>
       <div class="pattern-words">${pw.map(w=>`<span class="pattern-word">${renderHighlighted(w,patterns)}</span>`).join('')}</div>
     </div>`;
   }).join('');
