@@ -148,9 +148,11 @@ let G = {};
 let revealTimer = null;
 
 function parseWord(entry) {
-  const m = entry.trim().match(/^([a-zA-Z]*)\[([a-zA-Z]+)\]([a-zA-Z]*)$/);
+  const raw = typeof entry === 'object' ? entry.word : entry;
+  const flashTime = typeof entry === 'object' ? entry.flashTime : null;
+  const m = raw.trim().match(/^([a-zA-Z]*)\[([a-zA-Z]+)\]([a-zA-Z]*)$/);
   if (!m) return null;
-  return { raw:(m[1]+m[2]+m[3]).toLowerCase(), chunk:m[2].toLowerCase(), before:m[1].toLowerCase(), after:m[3].toLowerCase() };
+  return { raw:(m[1]+m[2]+m[3]).toLowerCase(), chunk:m[2].toLowerCase(), before:m[1].toLowerCase(), after:m[3].toLowerCase(), flashTime };
 }
 function getPatterns(words) {
   const seen=[],r=[];
@@ -170,11 +172,12 @@ async function fetchCatalog(){
   const map = {};
   lines.forEach(line => {
     const cols = line.split(',');
-    const session = cols[0]?.trim().replace(/^"|"$/g,'');
-    const word    = cols[1]?.trim().replace(/^"|"$/g,'');
+    const session   = cols[0]?.trim().replace(/^"|"$/g,'');
+    const word      = cols[1]?.trim().replace(/^"|"$/g,'');
+    const flashTime = cols[2]?.trim().replace(/^"|"$/g,'');
     if(!session||!word) return;
     if(!map[session]) map[session]=[];
-    map[session].push(word);
+    map[session].push({ word, flashTime: flashTime ? parseFloat(flashTime) : null });
   });
   return Object.entries(map).map(([title,entries])=>({title,entries}));
 }
@@ -311,12 +314,12 @@ function renderGame(){
     <div class="pool">${tiles}</div>
     ${pos>0?`<button class="undo-btn" onclick="undoLast()">← undo</button>`:''}
   `;
-  if(showing) startRevealTimer(col.bar);
+  if(showing) startRevealTimer(col.bar, wordObj.flashTime);
 }
 
-function startRevealTimer(barColor){
+function startRevealTimer(barColor, flashSecs){
   clearTimeout(revealTimer);
-  const dur=500, start=Date.now();
+  const dur = flashSecs ? flashSecs*1000 : 500, start=Date.now();
   const tick=()=>{
     const el=document.getElementById('tb'); if(!el)return;
     const pct=Math.max(0,100-(Date.now()-start)/dur*100);
@@ -433,7 +436,8 @@ let WS = {};
 function startWordSearch(){
   const words = G.words.map(w=>w.raw.toUpperCase());
   const patterns = G.patterns;
-  const size = Math.max(10, Math.ceil(words.reduce((a,w)=>Math.max(a,w.length),0) * 1.5));
+  const longestWord = words.reduce((a,w)=>Math.max(a,w.length),0);
+  const size = Math.min(10, Math.max(longestWord + 2, Math.ceil(Math.sqrt(words.join('').length * 2))));
   const {grid, placed} = buildGrid(words, size);
   WS = { grid, placed, size, words, patterns, foundWords:new Set(), selecting:false, startCell:null, currentCells:[] };
   renderWordSearch();
@@ -474,7 +478,7 @@ function buildGrid(words, size){
 
 function renderWordSearch(){
   const {grid,placed,size,words,patterns,foundWords} = WS;
-  const cellSize = Math.min(36, Math.floor((Math.min(window.innerWidth,480)-60)/size));
+  const cellSize = Math.min(44, Math.floor((Math.min(window.innerWidth,480)-60)/size));
 
   const cells = grid.map((row,r)=>
     row.map((letter,c)=>{
