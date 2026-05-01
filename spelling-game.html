@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>Spelling Game</title>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -52,8 +52,7 @@ body {
 .intro-wrap { text-align: center; }
 .intro-title { font-size: 22px; font-weight: 800; color: #2d2d5e; margin-bottom: 0.25rem; }
 .intro-sub { font-size: 13px; color: #aaaacc; margin-bottom: 1.25rem; }
-.pattern-group { border-radius: 14px; padding: 0.75rem 1.25rem; margin-bottom: 0.75rem; text-align: left; }
-.pattern-label { font-size: 20px; font-weight: 800; margin-bottom: 0.25rem; text-transform: uppercase; letter-spacing: 2px; }
+.pattern-group { border-radius: 14px; padding: 0.5rem 1rem; margin-bottom: 0.5rem; text-align: left; }
 .pattern-words { display: flex; flex-direction: column; gap: 4px; }
 .pattern-word { font-size: 15px; font-weight: 700; color: #2d2d5e; }
 .chunk-highlight { border-radius: 6px; padding: 0 3px; }
@@ -62,11 +61,7 @@ body {
 .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; }
 .stars { font-size: 18px; color: #f5b100; letter-spacing: 3px; min-width: 60px; }
 .prog { font-size: 13px; font-weight: 700; color: #aaaacc; }
-.word-reveal {
-  font-size: 26px; font-weight: 800; letter-spacing: 4px; color: #2d2d5e;
-  min-height: 46px; display: flex; align-items: center; justify-content: center;
-  margin-bottom: 0.4rem; text-transform: uppercase; transition: opacity 0.5s; flex-wrap: wrap;
-}
+.word-reveal { font-size: 26px; font-weight: 800; letter-spacing: 4px; color: #2d2d5e; min-height: 46px; display: flex; align-items: center; justify-content: center; margin-bottom: 0.4rem; text-transform: uppercase; transition: opacity 0.5s; flex-wrap: wrap; }
 .word-reveal.hidden { opacity: 0; pointer-events: none; }
 .timer-wrap { height: 5px; background: #eef0ff; border-radius: 5px; margin-bottom: 0.9rem; overflow: hidden; }
 .timer-bar { height: 5px; border-radius: 5px; }
@@ -101,6 +96,33 @@ body {
 .done-wrap h2 { font-size: 22px; font-weight: 800; color: #2d2d5e; margin: 1rem 0 0.5rem; }
 .done-wrap p { font-size: 15px; color: #8888aa; margin-bottom: 0.25rem; }
 .done-stars { font-size: 26px; color: #f5b100; margin: 0.75rem 0 1.5rem; }
+
+/* Word Search */
+.ws-wrap { text-align: center; }
+.ws-title { font-size: 20px; font-weight: 800; color: #2d2d5e; margin-bottom: 0.25rem; }
+.ws-sub { font-size: 13px; color: #aaaacc; margin-bottom: 1.25rem; }
+.ws-grid-wrap { display: inline-block; margin-bottom: 1.25rem; touch-action: none; user-select: none; -webkit-user-select: none; }
+.ws-grid { display: grid; gap: 3px; }
+.ws-cell {
+  width: 36px; height: 36px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px; font-weight: 800; text-transform: uppercase;
+  background: #f4f5ff; color: #2d2d5e;
+  transition: background 0.15s, color 0.15s;
+  cursor: pointer; border: 2px solid transparent;
+}
+.ws-cell.selecting { background: #e0e3ff; color: #5050cc; border-color: #a0a0f8; }
+.ws-cell.found { color: white; }
+.ws-word-list { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 1.5rem; }
+.ws-word {
+  font-size: 14px; font-weight: 700; padding: 5px 12px;
+  border-radius: 20px; background: #f4f5ff; color: #2d2d5e;
+  transition: all 0.3s;
+}
+.ws-word.found { text-decoration: line-through; opacity: 0.5; }
+.ws-done { padding: 1.5rem 0; }
+.ws-done div { font-size: 64px; margin-bottom: 0.75rem; }
+.ws-done h2 { font-size: 22px; font-weight: 800; color: #2d2d5e; margin-bottom: 1.5rem; }
 </style>
 </head>
 <body>
@@ -118,7 +140,6 @@ const PALETTE = [
   { bg:'#f3e5f5', text:'#4a148c', bar:'#ab47bc' },
 ];
 const MSGS = ['Amazing!','Superstar!','Brilliant!','You got it!','Wow!','Perfect!','Well done!'];
-// Avoid visually confusing letter pairs
 const CONFUSABLE = { 'B':'D','D':'B','M':'N','N':'M','P':'Q','Q':'P','U':'V','V':'U','I':'L','L':'I' };
 const ALL = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 
@@ -159,9 +180,7 @@ async function fetchCatalog(){
 }
 
 async function postProgress(data){
-  try{
-    await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
-  }catch(e){}
+  try{ await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}); }catch(e){}
 }
 
 // ── CATALOG ──
@@ -196,7 +215,6 @@ async function showCatalog(){
           <div class="pattern-dots">${dots}</div>
         </div>`;
       }).join('');
-
   document.getElementById('app').innerHTML=`
     <div class="catalog-header">
       <div class="catalog-title">📖 Spelling Game</div>
@@ -253,7 +271,6 @@ function say(w){
 
 function buildPool(word){
   const needed = word.toUpperCase().split('');
-  // Pick distractors that aren't confusable with letters in the word
   const confusableWith = new Set(needed.flatMap(l=>[l, CONFUSABLE[l]].filter(Boolean)));
   const candidates = ALL.filter(c=>!confusableWith.has(c));
   const extras = candidates.sort(()=>Math.random()-0.5).slice(0,3);
@@ -294,7 +311,6 @@ function renderGame(){
     <div class="pool">${tiles}</div>
     ${pos>0?`<button class="undo-btn" onclick="undoLast()">← undo</button>`:''}
   `;
-
   if(showing) startRevealTimer(col.bar);
 }
 
@@ -400,13 +416,213 @@ function renderAllDone(){
   clearTimeout(revealTimer);
   document.getElementById('app').innerHTML=`
     <div class="done-wrap">
-      <div style="font-size:64px">🎁</div>
+      <div style="font-size:64px">🌟</div>
       <h2>All done!</h2>
       <p>You earned <strong>${G.stars}</strong> stars today!</p>
       <div class="done-stars">${'★'.repeat(G.stars)}</div>
-      <button class="green-btn" onclick="startGame(${G.sessionIdx})">play again →</button>
+      <button class="green-btn" onclick="startWordSearch()">word search →</button>
       <br><button class="text-link" onclick="showCatalog()">back to sessions</button>
     </div>`;
+}
+
+// ══════════════════════════════════════
+// WORD SEARCH
+// ══════════════════════════════════════
+let WS = {};
+
+function startWordSearch(){
+  const words = G.words.map(w=>w.raw.toUpperCase());
+  const patterns = G.patterns;
+  const size = Math.max(10, Math.ceil(words.reduce((a,w)=>Math.max(a,w.length),0) * 1.5));
+  const {grid, placed} = buildGrid(words, size);
+  WS = { grid, placed, size, words, patterns, foundWords:new Set(), selecting:false, startCell:null, currentCells:[] };
+  renderWordSearch();
+}
+
+function buildGrid(words, size){
+  const grid = Array.from({length:size},()=>Array(size).fill(''));
+  const placed = [];
+  const dirs = [{dr:0,dc:1},{dr:1,dc:0}]; // left-to-right, top-to-bottom only
+
+  for(const word of words){
+    let tries=0, ok=false;
+    while(tries++<200&&!ok){
+      const dir = dirs[Math.floor(Math.random()*dirs.length)];
+      const maxR = dir.dr===0 ? size : size-word.length;
+      const maxC = dir.dc===0 ? size : size-word.length;
+      const r = Math.floor(Math.random()*maxR);
+      const c = Math.floor(Math.random()*maxC);
+      let fits=true;
+      const cells=[];
+      for(let i=0;i<word.length;i++){
+        const nr=r+dir.dr*i, nc=c+dir.dc*i;
+        if(grid[nr][nc]!==''&&grid[nr][nc]!==word[i]){fits=false;break;}
+        cells.push({r:nr,c:nc});
+      }
+      if(fits){
+        cells.forEach((cell,i)=>grid[cell.r][cell.c]=word[i]);
+        placed.push({word,cells,found:false});
+        ok=true;
+      }
+    }
+  }
+  // Fill empty with random letters
+  const alpha='ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  for(let r=0;r<size;r++) for(let c=0;c<size;c++) if(!grid[r][c]) grid[r][c]=alpha[Math.floor(Math.random()*26)];
+  return {grid,placed};
+}
+
+function renderWordSearch(){
+  const {grid,placed,size,words,patterns,foundWords} = WS;
+  const cellSize = Math.min(36, Math.floor((Math.min(window.innerWidth,480)-60)/size));
+
+  const cells = grid.map((row,r)=>
+    row.map((letter,c)=>{
+      const foundInfo = placed.find(p=>p.found&&p.cells.some(cell=>cell.r===r&&cell.c===c));
+      const wordObj = foundInfo ? G.words.find(w=>w.raw.toUpperCase()===foundInfo.word) : null;
+      const col = wordObj ? patternColor(wordObj.chunk,patterns) : null;
+      const style = foundInfo ? `background:${col.bar};color:white;` : '';
+      return `<div class="ws-cell" id="wc-${r}-${c}" data-r="${r}" data-c="${c}" style="width:${cellSize}px;height:${cellSize}px;font-size:${Math.floor(cellSize*0.42)}px;${style}">${letter}</div>`;
+    }).join('')
+  ).join('');
+
+  const wordList = placed.map(p=>{
+    const wordObj = G.words.find(w=>w.raw.toUpperCase()===p.word);
+    const col = wordObj ? patternColor(wordObj.chunk,patterns) : null;
+    const highlighted = wordObj ? renderHighlighted(wordObj,patterns) : p.word;
+    return `<span class="ws-word${p.found?' found':''}" id="wsw-${p.word}">${highlighted}</span>`;
+  }).join('');
+
+  document.getElementById('app').innerHTML=`
+    <div class="ws-wrap">
+      <div class="ws-title">🔍 Word Search</div>
+      <div class="ws-sub">Find all the words!</div>
+      <div class="ws-grid-wrap">
+        <div class="ws-grid" id="wsgrid" style="grid-template-columns:repeat(${size},${cellSize}px);gap:3px">${cells}</div>
+      </div>
+      <div class="ws-word-list">${wordList}</div>
+    </div>`;
+
+  setupWordSearchTouch();
+}
+
+function setupWordSearchTouch(){
+  const grid = document.getElementById('wsgrid');
+  if(!grid)return;
+
+  function cellFromPoint(x,y){
+    const els = document.elementsFromPoint(x,y);
+    return els.find(e=>e.classList.contains('ws-cell'));
+  }
+
+  function getCellsInLine(start,end){
+    const r1=parseInt(start.dataset.r),c1=parseInt(start.dataset.c);
+    const r2=parseInt(end.dataset.r),c2=parseInt(end.dataset.c);
+    const cells=[];
+    // horizontal
+    if(r1===r2){
+      const step=c2>=c1?1:-1;
+      for(let c=c1;c!==c2+step;c+=step) cells.push({r:r1,c});
+    }
+    // vertical
+    else if(c1===c2){
+      const step=r2>=r1?1:-1;
+      for(let r=r1;r!==r2+step;r+=step) cells.push({r,c:c1});
+    }
+    return cells;
+  }
+
+  function highlightCells(cells){
+    // Clear previous selecting
+    document.querySelectorAll('.ws-cell.selecting').forEach(el=>el.classList.remove('selecting'));
+    cells.forEach(({r,c})=>{
+      const el=document.getElementById(`wc-${r}-${c}`);
+      if(el&&!el.style.background) el.classList.add('selecting');
+    });
+  }
+
+  function checkWord(cells){
+    const letters=cells.map(({r,c})=>WS.grid[r][c]).join('');
+    const match=WS.placed.find(p=>!p.found&&(p.word===letters||p.word===letters.split('').reverse().join('')));
+    if(match){
+      match.found=true;
+      WS.foundWords.add(match.word);
+      // Colour found cells
+      const wordObj=G.words.find(w=>w.raw.toUpperCase()===match.word);
+      const col=wordObj?patternColor(wordObj.chunk,WS.patterns):PALETTE[0];
+      cells.forEach(({r,c})=>{
+        const el=document.getElementById(`wc-${r}-${c}`);
+        if(el){el.classList.remove('selecting');el.style.background=col.bar;el.style.color='white';}
+      });
+      const wordEl=document.getElementById(`wsw-${match.word}`);
+      if(wordEl)wordEl.classList.add('found');
+      if(WS.foundWords.size===WS.placed.length) setTimeout(renderWordSearchDone,600);
+    } else {
+      document.querySelectorAll('.ws-cell.selecting').forEach(el=>el.classList.remove('selecting'));
+    }
+  }
+
+  // Touch
+  grid.addEventListener('touchstart',e=>{
+    e.preventDefault();
+    const t=e.touches[0];
+    const cell=cellFromPoint(t.clientX,t.clientY);
+    if(!cell)return;
+    WS.selecting=true; WS.startCell=cell; WS.currentCells=[{r:parseInt(cell.dataset.r),c:parseInt(cell.dataset.c)}];
+    highlightCells(WS.currentCells);
+  },{passive:false});
+
+  grid.addEventListener('touchmove',e=>{
+    e.preventDefault();
+    if(!WS.selecting||!WS.startCell)return;
+    const t=e.touches[0];
+    const cell=cellFromPoint(t.clientX,t.clientY);
+    if(!cell)return;
+    WS.currentCells=getCellsInLine(WS.startCell,cell);
+    highlightCells(WS.currentCells);
+  },{passive:false});
+
+  grid.addEventListener('touchend',e=>{
+    e.preventDefault();
+    if(!WS.selecting)return;
+    WS.selecting=false;
+    checkWord(WS.currentCells);
+    WS.currentCells=[];WS.startCell=null;
+  },{passive:false});
+
+  // Mouse (for desktop)
+  grid.addEventListener('mousedown',e=>{
+    const cell=e.target.closest('.ws-cell');
+    if(!cell)return;
+    WS.selecting=true;WS.startCell=cell;WS.currentCells=[{r:parseInt(cell.dataset.r),c:parseInt(cell.dataset.c)}];
+    highlightCells(WS.currentCells);
+  });
+  grid.addEventListener('mousemove',e=>{
+    if(!WS.selecting||!WS.startCell)return;
+    const cell=e.target.closest('.ws-cell');
+    if(!cell)return;
+    WS.currentCells=getCellsInLine(WS.startCell,cell);
+    highlightCells(WS.currentCells);
+  });
+  grid.addEventListener('mouseup',e=>{
+    if(!WS.selecting)return;
+    WS.selecting=false;
+    checkWord(WS.currentCells);
+    WS.currentCells=[];WS.startCell=null;
+  });
+}
+
+function renderWordSearchDone(){
+  const app=document.getElementById('app');
+  if(!app)return;
+  const existing=app.querySelector('.ws-wrap');
+  if(existing){
+    const doneDiv=document.createElement('div');
+    doneDiv.className='ws-done';
+    doneDiv.innerHTML=`<div>🎊</div><h2>You found them all!</h2>
+      <button class="green-btn" onclick="showCatalog()">back to sessions</button>`;
+    existing.appendChild(doneDiv);
+  }
 }
 
 showCatalog();
