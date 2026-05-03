@@ -336,7 +336,7 @@ function startRevealTimer(barColor, flashSecs){
     const ws=document.getElementById('ws'),tw=document.getElementById('tw'),sl=document.getElementById('sl'),ts=document.getElementById('ts');
     if(ws)ws.classList.add('hidden');
     if(tw)tw.style.display='none';
-    if(ts)ts.style.display='none';
+    if(ts){ ts.textContent=(dur/1000).toFixed(1)+'s flash'; }
     if(sl)sl.textContent='spell it out';
   },dur);
 }
