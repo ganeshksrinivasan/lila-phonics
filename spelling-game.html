@@ -63,8 +63,9 @@ body {
 .prog { font-size: 13px; font-weight: 700; color: #aaaacc; }
 .word-reveal { font-size: 26px; font-weight: 800; letter-spacing: 4px; color: #2d2d5e; min-height: 46px; display: flex; align-items: center; justify-content: center; margin-bottom: 0.4rem; text-transform: uppercase; transition: opacity 0.5s; flex-wrap: wrap; }
 .word-reveal.hidden { opacity: 0; pointer-events: none; }
-.timer-wrap { height: 5px; background: #eef0ff; border-radius: 5px; margin-bottom: 0.9rem; overflow: hidden; }
+.timer-wrap { height: 5px; background: #eef0ff; border-radius: 5px; margin-bottom: 0.3rem; overflow: hidden; }
 .timer-bar { height: 5px; border-radius: 5px; }
+.timer-secs { font-size: 10px; color: #ccccdd; text-align: right; margin-bottom: 0.55rem; font-family: 'Nunito', sans-serif; font-weight: 600; letter-spacing: 0.5px; }
 .sub-lbl { font-size: 13px; color: #aaaacc; font-weight: 600; margin-bottom: 0.9rem; text-align: center; }
 .hear-btn { display: block; margin: 0 auto 0.3rem; background: #f0f4ff; border: 1.5px solid #dde0f5; border-radius: 50px; padding: 7px 20px; font-size: 13px; font-weight: 700; color: #7c7cf8; cursor: pointer; font-family: 'Nunito', sans-serif; }
 .hear-btn:hover { background: #e4e8ff; }
@@ -307,6 +308,7 @@ function renderGame(){
     </div>
     <div class="word-reveal${showing?'':' hidden'}" id="ws">${renderHighlighted(wordObj,patterns)}</div>
     <div class="timer-wrap" id="tw" style="${showing?'':'display:none'}"><div class="timer-bar" id="tb" style="width:100%;background:${col.bar}"></div></div>
+    <div class="timer-secs" id="ts" style="${showing?'':'display:none'}"></div>
     <div class="sub-lbl" id="sl">${showing?'remember it...':'spell it out'}</div>
     <button class="hear-btn" onclick="say('${word}')">🔊 hear it</button>
     <div class="kbd-hint">tap a tile or type on keyboard</div>
@@ -322,15 +324,19 @@ function startRevealTimer(barColor, flashSecs){
   const dur = flashSecs ? flashSecs*1000 : 500, start=Date.now();
   const tick=()=>{
     const el=document.getElementById('tb'); if(!el)return;
-    const pct=Math.max(0,100-(Date.now()-start)/dur*100);
+    const elapsed=Date.now()-start;
+    const pct=Math.max(0,100-elapsed/dur*100);
     el.style.width=pct+'%';
+    const ts=document.getElementById('ts');
+    if(ts){ const rem=Math.max(0,(dur-elapsed)/1000); ts.textContent=rem.toFixed(1)+'s'; }
     if(pct>0) requestAnimationFrame(tick);
   };
   requestAnimationFrame(tick);
   revealTimer=setTimeout(()=>{
-    const ws=document.getElementById('ws'),tw=document.getElementById('tw'),sl=document.getElementById('sl');
+    const ws=document.getElementById('ws'),tw=document.getElementById('tw'),sl=document.getElementById('sl'),ts=document.getElementById('ts');
     if(ws)ws.classList.add('hidden');
     if(tw)tw.style.display='none';
+    if(ts)ts.style.display='none';
     if(sl)sl.textContent='spell it out';
   },dur);
 }
