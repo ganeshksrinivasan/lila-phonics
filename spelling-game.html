@@ -150,17 +150,44 @@ let revealTimer = null;
 function parseWord(entry) {
   const raw = typeof entry === 'object' ? entry.word : entry;
   const flashTime = typeof entry === 'object' ? entry.flashTime : null;
-  const m = raw.trim().match(/^([a-zA-Z]*)\[([a-zA-Z]+)\]([a-zA-Z]*)$/);
-  if (!m) return null;
-  return { raw:(m[1]+m[2]+m[3]).toLowerCase(), chunk:m[2].toLowerCase(), before:m[1].toLowerCase(), after:m[3].toLowerCase(), flashTime };
+  const str = raw.trim();
+  const segments = [];
+  const chunks = [];
+  let wordRaw = '';
+  let remaining = str;
+  while (remaining.length > 0) {
+    const m = remaining.match(/^([a-zA-Z]*)\[([a-zA-Z]+)\]/);
+    if (m) {
+      if (m[1]) { segments.push({ text: m[1].toLowerCase(), isChunk: false }); wordRaw += m[1]; }
+      segments.push({ text: m[2].toLowerCase(), isChunk: true });
+      wordRaw += m[2];
+      if (!chunks.includes(m[2].toLowerCase())) chunks.push(m[2].toLowerCase());
+      remaining = remaining.slice(m[0].length);
+    } else {
+      const rest = remaining.replace(/\[|\]/g, '');
+      if (rest) { segments.push({ text: rest.toLowerCase(), isChunk: false }); wordRaw += rest; }
+      remaining = '';
+    }
+  }
+  if (chunks.length === 0) return null;
+  return { raw: wordRaw.toLowerCase(), chunk: chunks[0], chunks, segments, flashTime };
 }
 function getPatterns(words) {
   const seen=[],r=[];
-  words.forEach(w=>{ if(w&&!seen.includes(w.chunk)){seen.push(w.chunk);r.push(w.chunk);} });
+  words.forEach(w=>{ if(!w) return; (w.chunks||[w.chunk]).forEach(c=>{ if(!seen.includes(c)){seen.push(c);r.push(c);} }); });
   return r;
 }
 function patternColor(chunk,patterns){ return PALETTE[patterns.indexOf(chunk)%PALETTE.length]; }
 function renderHighlighted(wordObj,patterns){
+  if (wordObj.segments) {
+    return wordObj.segments.map(seg => {
+      if (seg.isChunk) {
+        const col = patternColor(seg.text, patterns);
+        return `<span class="chunk-highlight" style="background:${col.bg};color:${col.text}">${seg.text.toUpperCase()}</span>`;
+      }
+      return seg.text.toUpperCase();
+    }).join('');
+  }
   const col = patternColor(wordObj.chunk,patterns);
   return `${wordObj.before.toUpperCase()}<span class="chunk-highlight" style="background:${col.bg};color:${col.text}">${wordObj.chunk.toUpperCase()}</span>${wordObj.after.toUpperCase()}`;
 }
@@ -233,7 +260,7 @@ function showIntro(idx){
   const patterns = getPatterns(words);
   const groups = patterns.map(p=>{
     const col = patternColor(p,patterns);
-    const pw = words.filter(w=>w.chunk===p);
+    const pw = words.filter(w=>(w.chunks||[w.chunk]).includes(p));
     return `<div class="pattern-group" style="background:${col.bg}">
       <div class="pattern-words">${pw.map(w=>`<span class="pattern-word">${renderHighlighted(w,patterns)}</span>`).join('')}</div>
     </div>`;
