@@ -174,7 +174,7 @@ function parseWord(entry) {
 }
 function getPatterns(words) {
   const seen=[],r=[];
-  words.forEach(w=>{ if(!w) return; (w.chunks||[w.chunk]).forEach(c=>{ if(!seen.includes(c)){seen.push(c);r.push(c);} }); });
+  words.forEach(w=>{ if(w&&!seen.includes(w.chunk)){seen.push(w.chunk);r.push(w.chunk);} });
   return r;
 }
 function patternColor(chunk,patterns){ return PALETTE[patterns.indexOf(chunk)%PALETTE.length]; }
@@ -260,7 +260,7 @@ function showIntro(idx){
   const patterns = getPatterns(words);
   const groups = patterns.map(p=>{
     const col = patternColor(p,patterns);
-    const pw = words.filter(w=>(w.chunks||[w.chunk]).includes(p));
+    const pw = words.filter(w=>w.chunk===p);
     return `<div class="pattern-group" style="background:${col.bg}">
       <div class="pattern-words">${pw.map(w=>`<span class="pattern-word">${renderHighlighted(w,patterns)}</span>`).join('')}</div>
     </div>`;
