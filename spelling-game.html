@@ -52,6 +52,9 @@ body {
 .intro-wrap { text-align: center; }
 .intro-title { font-size: 22px; font-weight: 800; color: #2d2d5e; margin-bottom: 0.25rem; }
 .intro-sub { font-size: 13px; color: #aaaacc; margin-bottom: 1.25rem; }
+.filter-toggle { background: #f0f4ff; border: 1.5px solid #dde0f5; border-radius: 50px; padding: 7px 18px; font-size: 13px; font-weight: 700; color: #7c7cf8; cursor: pointer; font-family: 'Nunito', sans-serif; margin-bottom: 1rem; transition: background 0.2s, border-color 0.2s; }
+.filter-toggle:hover { background: #e4e8ff; }
+.filter-toggle.on { background: #fff8e5; border-color: #f5d98a; color: #b8860b; }
 .pattern-group { border-radius: 14px; padding: 0.5rem 1rem; margin-bottom: 0.5rem; text-align: left; }
 .pattern-words { display: flex; flex-direction: column; gap: 4px; }
 .pattern-word { font-size: 15px; font-weight: 700; color: #2d2d5e; }
@@ -146,10 +149,24 @@ const ALL = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 let catalog = [];
 let G = {};
 let revealTimer = null;
+let sessionShowAll = {}; // per-session: true = show every word, false/undefined = only toggled
+
+// Returns the words to show for a session. If the session has any toggled words,
+// default to showing only those (unless sessionShowAll[idx] is set); otherwise show all.
+function visibleWords(words, idx) {
+  const anyToggled = words.some(w => w.toggled);
+  if (!anyToggled) return words;
+  return sessionShowAll[idx] ? words : words.filter(w => w.toggled);
+}
+function toggleFilter(idx) {
+  sessionShowAll[idx] = !sessionShowAll[idx];
+  showIntro(idx);
+}
 
 function parseWord(entry) {
   const raw = typeof entry === 'object' ? entry.word : entry;
   const flashTime = typeof entry === 'object' ? entry.flashTime : null;
+  const toggled = typeof entry === 'object' ? !!entry.toggled : false;
   const str = raw.trim();
   const segments = [];
   const chunks = [];
@@ -170,7 +187,7 @@ function parseWord(entry) {
     }
   }
   if (chunks.length === 0) return null;
-  return { raw: wordRaw.toLowerCase(), chunk: chunks[0], chunks, segments, flashTime };
+  return { raw: wordRaw.toLowerCase(), chunk: chunks[0], chunks, segments, flashTime, toggled };
 }
 function getPatterns(words) {
   const seen=[],r=[];
@@ -202,9 +219,10 @@ async function fetchCatalog(){
     const session   = cols[0]?.trim().replace(/^"|"$/g,'');
     const word      = cols[1]?.trim().replace(/^"|"$/g,'');
     const flashTime = cols[2]?.trim().replace(/^"|"$/g,'');
+    const toggled   = cols[3]?.trim().replace(/^"|"$/g,'');
     if(!session||!word) return;
     if(!map[session]) map[session]=[];
-    map[session].push({ word, flashTime: flashTime ? parseFloat(flashTime) : null });
+    map[session].push({ word, flashTime: flashTime ? parseFloat(flashTime) : null, toggled: /^(true|yes|y|x|1|on|✓)$/i.test(toggled||'') });
   });
   return Object.entries(map).map(([title,entries])=>({title,entries}));
 }
@@ -233,7 +251,9 @@ async function showCatalog(){
   const cards = catalog.length===0
     ? `<div class="empty-state"><div>📚</div><p>No sessions in your Google Sheet yet.</p></div>`
     : catalog.map((s,i)=>{
-        const words = s.entries.map(parseWord).filter(Boolean);
+        const allWords = s.entries.map(parseWord).filter(Boolean);
+        const words = visibleWords(allWords, i);
+        const filtered = words.length !== allWords.length;
         const patterns = getPatterns(words);
         const dots = patterns.map(p=>{
           const col = patternColor(p,patterns);
@@ -241,7 +261,7 @@ async function showCatalog(){
         }).join('');
         return `<div class="session-card" onclick="showIntro(${i})">
           <h3>${s.title}</h3>
-          <p>${words.length} word${words.length!==1?'s':''}</p>
+          <p>${words.length} word${words.length!==1?'s':''}${filtered?` <span style="color:#f5b100">⭐ of ${allWords.length}</span>`:''}</p>
           <div class="pattern-dots">${dots}</div>
         </div>`;
       }).join('');
@@ -256,7 +276,10 @@ async function showCatalog(){
 function showIntro(idx){
   clearTimeout(revealTimer);
   const s = catalog[idx];
-  const words = s.entries.map(parseWord).filter(Boolean);
+  const allWords = s.entries.map(parseWord).filter(Boolean);
+  const words = visibleWords(allWords, idx);
+  const hasToggled = allWords.some(w=>w.toggled);
+  const showingAll = words.length === allWords.length;
   const patterns = getPatterns(words);
   const groups = patterns.map(p=>{
     const col = patternColor(p,patterns);
@@ -265,11 +288,15 @@ function showIntro(idx){
       <div class="pattern-words">${pw.map(w=>`<span class="pattern-word">${renderHighlighted(w,patterns)}</span>`).join('')}</div>
     </div>`;
   }).join('');
+  const filterSwitch = hasToggled
+    ? `<button class="filter-toggle${showingAll?'':' on'}" onclick="toggleFilter(${idx})">${showingAll?`show only ⭐ toggled`:`⭐ toggled only · show all ${allWords.length}`}</button>`
+    : '';
   document.getElementById('app').innerHTML=`
     <button class="back-link" onclick="showCatalog()">← back</button>
     <div class="intro-wrap">
       <div class="intro-title">${s.title}</div>
       <div class="intro-sub">Look at the patterns together, then start!</div>
+      ${filterSwitch}
       ${groups}
       <button class="green-btn" style="width:100%;margin-top:0.75rem" onclick="startGame(${idx})">start →</button>
     </div>`;
@@ -278,7 +305,7 @@ function showIntro(idx){
 // ── GAME ──
 function startGame(idx){
   const s = catalog[idx];
-  const words = s.entries.map(parseWord).filter(Boolean).sort(()=>Math.random()-0.5);
+  const words = visibleWords(s.entries.map(parseWord).filter(Boolean), idx).sort(()=>Math.random()-0.5);
   const patterns = getPatterns(words);
   G = { words, patterns, idx:0, stars:0, pos:0, mistakes:0, pool:[], sessionIdx:idx, sessionTitle:s.title };
   startWord();
